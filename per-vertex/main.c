@@ -230,25 +230,24 @@ void Load_Texture(const char* fn, Texture* t){
 
 
 
-inline float smoothstep(float min, float max, float x)
-{
+inline float smoothstep(float min, float max, float x){
 	if(x < min)
 		return 0;
 	if(x >= max)
 		return 1;
-    x  = (x-min)/(max-min);
+	x  = (x-min)/(max-min);
 	
-    return (-2*(x*x*x)) + \
+	return (-2*(x*x*x)) + \
 			(3*(x*x));
 }
 
 inline void Normalize(Vector3 *in,Vector3 *out){
 	//inverse square root is apparently faster on Dreamcast
-	 float length = frsqrt(fipr_magnitude_sqr(in->x, in->y, in->z, 0.0));
-	 out->x = in->x*length;
-	 out->y = in->y*length;
-	 out->z = in->z*length;
-	
+	float length = frsqrt(fipr_magnitude_sqr(in->x, in->y, in->z, 0.0));
+	out->x = in->x*length;
+	out->y = in->y*length;
+	out->z = in->z*length;
+
 }
 
 inline void Dot(Vector3 *vec1,Vector3* vec2,float* out){
@@ -276,15 +275,14 @@ inline void Cross(Vector3 *v1,Vector3* v2,Vector3 *out){
 
 
 inline float DualConeSpotlight(pvr_vertex_t *P,Light* l){
-    Vector3 V;
-    pos1.x = P->x - l->p.x;
-    pos1.y = P->y - l->p.y;
-    pos1.z = P->z - l->p.z;
-    Normalize(&pos1,&V);
-    float cosDirection;
-    Dot(&V,&l->Dir,&cosDirection);
-
-    return smoothstep(l->cosOuterCone,l->cosInnerCone,cosDirection);
+	Vector3 V;
+	pos1.x = P->x - l->p.x;
+	pos1.y = P->y - l->p.y;
+	pos1.z = P->z - l->p.z;
+	Normalize(&pos1,&V);
+	float cosDirection;
+	Dot(&V,&l->Dir,&cosDirection);
+	return smoothstep(l->cosOuterCone,l->cosInnerCone,cosDirection);
 }
 
 
@@ -292,38 +290,37 @@ inline float DualConeSpotlight(pvr_vertex_t *P,Light* l){
 
 void Light_Vert(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *mat){
 
-
 	Mult_Vector3(&mat->Ambient,&GlobalAmbient,&FinalAmbient);
-    FinalPos.x = l->p.x - p->x;
-    FinalPos.y = l->p.y - p->y;
-    FinalPos.z = l->p.z - p->z;
-
-    Normalize(&FinalPos,&L);
-
-    Dot(n,&L,&dot);
-    diffuselight = MAX(dot,0.0);
-
-    Mult_Vector3(&l->c,&mat->Diffuse,&FinalDiffuse);
+	FinalPos.x = l->p.x - p->x;
 	
+	FinalPos.y = l->p.y - p->y;
+	FinalPos.z = l->p.z - p->z;
+
+	Normalize(&FinalPos,&L);
+
+	Dot(n,&L,&dot);
+	diffuselight = MAX(dot,0.0);
+
+	Mult_Vector3(&l->c,&mat->Diffuse,&FinalDiffuse);
 	d = frsqrt(fipr_magnitude_sqr(FinalPos.x,FinalPos.y,FinalPos.z,0.0));
-    atten = 1.0 / (l->aa + l->ab * (d + l->ac / (d / d)));
+	atten = 1.0 / (l->aa + l->ab * (d + l->ac / (d / d)));
 
-    FinalPos.x = 640/2 - p->x;
-    FinalPos.y = 480/2 - p->y;
-    FinalPos.z = 256 - p->z;
-    Vector3 V;
-    Normalize(&FinalPos,&V);
-    Add_Vector3(&L,&V,&pos1);
+	FinalPos.x = 640/2 - p->x;
+	FinalPos.y = 480/2 - p->y;
+	FinalPos.z = 256 - p->z;
+	Vector3 V;
+	Normalize(&FinalPos,&V);
+	Add_Vector3(&L,&V,&pos1);
 
-    Vector3 H;
-    Normalize(&pos1,&H);
-    Dot(n,&H,&dot);
+	Vector3 H;
+	Normalize(&pos1,&H);
+	Dot(n,&H,&dot);
 
-    float specularLight = pow(MAX(dot, 0),mat->shine);
+	float specularLight = pow(MAX(dot, 0),mat->shine);
 	
-    if (diffuselight <= 0) specularLight = 0;
+	if (diffuselight <= 0) specularLight = 0;
 	
-    Mult_Vector3(&mat->Specular,&l->c,&FinalSpec);
+	Mult_Vector3(&mat->Specular,&l->c,&FinalSpec);
 	if(l->Spotlight == 0) {
 		FinalSpec.x *=  specularLight * atten;
 		FinalSpec.y *=  specularLight * atten;
@@ -343,23 +340,23 @@ void Light_Vert(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *ma
 		FinalDiffuse.z *= diffuselight * spot * atten;	
 	}
 
-    Add_Vector3(&mat->Emissive,&FinalAmbient,&EmissAmb);
-    Add_Vector3(&FinalDiffuse,&EmissAmb,&FinalAmbient);
-    Add_Vector3(&FinalSpec,&FinalAmbient,&FinalClr);
+	Add_Vector3(&mat->Emissive,&FinalAmbient,&EmissAmb);
+	Add_Vector3(&FinalDiffuse,&EmissAmb,&FinalAmbient);
+	Add_Vector3(&FinalSpec,&FinalAmbient,&FinalClr);
 	//Blend and clamp
-    outclr->x += FinalClr.x;
+	outclr->x += FinalClr.x;
 	outclr->x = MIN(outclr->x,1.0);
-    outclr->y += FinalClr.y;
+	outclr->y += FinalClr.y;
 	outclr->y = MIN(outclr->y,1.0);
-    outclr->z += FinalClr.z;
+	outclr->z += FinalClr.z;
 	outclr->z = MIN(outclr->z,1.0);
-    outclr->w = 1.0;
+	outclr->w = 1.0;
 }
 
 
 
 void LightQuad(Quad  *qd,Light* l){
-    int i;
+	int i;
 	//Calculate surface normal
 	pos1.x = qd->verts[1].p.x - qd->verts[0].p.x;
 	pos1.y = qd->verts[1].p.y - qd->verts[0].p.y;
@@ -368,10 +365,9 @@ void LightQuad(Quad  *qd,Light* l){
 	pos2.y = qd->verts[2].p.y - qd->verts[0].p.y;
 	pos2.z = qd->verts[2].p.z - qd->verts[0].p.z;
 	Cross(&pos1,&pos2,&pos3);
-    Normalize(&pos3,&qd->surfacenormal);
-   
+	Normalize(&pos3,&qd->surfacenormal);
     for(i = 0;i< 4;i++){
-        Light_Vert(&qd->verts[i].p,&qd->surfacenormal,l,&qd->verts[i].FinalColor,&qd->mat);
+		Light_Vert(&qd->verts[i].p,&qd->surfacenormal,l,&qd->verts[i].FinalColor,&qd->mat);
     }
 
 }
@@ -420,96 +416,95 @@ void Draw_Bump(Quad *qd,Light *l){
 
 
 void Draw_Quad(Quad* qd){
-        int i;
-		pvr_poly_cxt_t p_cxt;
-		pvr_poly_hdr_t p_hdr;
+	int i;
+	pvr_poly_cxt_t p_cxt;
+	pvr_poly_hdr_t p_hdr;
 
-		pvr_poly_cxt_txr(&p_cxt,PVR_LIST_OP_POLY,GlobalTex.fmt,GlobalTex.w,GlobalTex.h,GlobalTex.txt,PVR_FILTER_BILINEAR);
-		pvr_poly_compile(&p_hdr,&p_cxt);
-		pvr_prim(&p_hdr,sizeof(p_hdr)); // submit header
-        for( i =0; i < 4;i++){
-			qd->verts[i].p.argb = PVR_PACK_COLOR(0.0,qd->verts[i].FinalColor.x,qd->verts[i].FinalColor.y,qd->verts[i].FinalColor.z);;
-			qd->verts[i].p.oargb = 0;
+	pvr_poly_cxt_txr(&p_cxt,PVR_LIST_OP_POLY,GlobalTex.fmt,GlobalTex.w,GlobalTex.h,GlobalTex.txt,PVR_FILTER_BILINEAR);
+	pvr_poly_compile(&p_hdr,&p_cxt);
+	pvr_prim(&p_hdr,sizeof(p_hdr)); // submit header
+	for( i =0; i < 4;i++){
+		qd->verts[i].p.argb = PVR_PACK_COLOR(0.0,qd->verts[i].FinalColor.x,qd->verts[i].FinalColor.y,qd->verts[i].FinalColor.z);;
+		qd->verts[i].p.oargb = 0;
 
-			pvr_prim(&qd->verts[i].p,sizeof(pvr_vertex_t));
-			qd->verts[i].FinalColor.x = 0;
-			qd->verts[i].FinalColor.y = 0;
-			qd->verts[i].FinalColor.z = 0; 
-        }
+		pvr_prim(&qd->verts[i].p,sizeof(pvr_vertex_t));
+		qd->verts[i].FinalColor.x = 0;
+		qd->verts[i].FinalColor.y = 0;
+		qd->verts[i].FinalColor.z = 0; 
+	}
 }
 
 
 void Init_Quad(Quad* qd,float x,float y,float w,float h){
-    qd->verts[0].p.x = x;
-    qd->verts[0].p.y = y;
-    qd->verts[0].p.z = 1.0;
+	qd->verts[0].p.x = x;
+	qd->verts[0].p.y = y;
+	qd->verts[0].p.z = 1.0;
 	qd->verts[0].p.flags = PVR_CMD_VERTEX;
 	qd->verts[0].p.u = 0.0;
 	qd->verts[0].p.v = 0.0;
 	qd->verts[0].p.oargb = 0;
 
-    qd->verts[0].c.x = 0.0;
-    qd->verts[0].c.y = 0.0;
-    qd->verts[0].c.z = 0.0;
+	qd->verts[0].c.x = 0.0;
+	qd->verts[0].c.y = 0.0;
+	qd->verts[0].c.z = 0.0;
 
 
-    qd->verts[1].p.x = x+w;
-    qd->verts[1].p.y = y;
-    qd->verts[1].p.z = 1.0;
+	qd->verts[1].p.x = x+w;
+	qd->verts[1].p.y = y;
+	qd->verts[1].p.z = 1.0;
 	qd->verts[1].p.flags = PVR_CMD_VERTEX;
 	qd->verts[1].p.u = 1.0;
 	qd->verts[1].p.v = 0.0;
 	qd->verts[1].p.oargb = 0;
 
-    qd->verts[1].c.x = 0.0;
-    qd->verts[1].c.y = 0.0;
-    qd->verts[1].c.z = 0.0;
+	qd->verts[1].c.x = 0.0;
+	qd->verts[1].c.y = 0.0;
+	qd->verts[1].c.z = 0.0;
 
-    qd->verts[2].p.x = x;
-    qd->verts[2].p.y = y+h;
-    qd->verts[2].p.z = 1.0;
+	qd->verts[2].p.x = x;
+	qd->verts[2].p.y = y+h;
+	qd->verts[2].p.z = 1.0;
 	qd->verts[2].p.flags = PVR_CMD_VERTEX;
 	qd->verts[2].p.u = 0.0;
 	qd->verts[2].p.v = 1.0;
 	qd->verts[2].p.oargb = 0;
 
-    qd->verts[2].c.x = 0.0;
-    qd->verts[2].c.y = 0.0;
-    qd->verts[2].c.z = 0.0;
+	qd->verts[2].c.x = 0.0;
+	qd->verts[2].c.y = 0.0;
+	qd->verts[2].c.z = 0.0;
 
-    qd->verts[3].p.x = x+w;
-    qd->verts[3].p.y = y+h;
-    qd->verts[3].p.z = 1.0;
+	qd->verts[3].p.x = x+w;
+	qd->verts[3].p.y = y+h;
+	qd->verts[3].p.z = 1.0;
 	qd->verts[3].p.flags = PVR_CMD_VERTEX_EOL;
 	qd->verts[3].p.u = 1.0;
 	qd->verts[3].p.v = 1.0;
 	qd->verts[3].p.oargb = 0;
 
-    qd->verts[3].c.x = 0.0;
-    qd->verts[3].c.y = 0.0;
-    qd->verts[3].c.z = 0.0;
+	qd->verts[3].c.x = 0.0;
+	qd->verts[3].c.y = 0.0;
+	qd->verts[3].c.z = 0.0;
 
+	qd->mat.Diffuse.x = 1.0;
+	qd->mat.Diffuse.y = 1.0;
+	qd->mat.Diffuse.z = 1.0;
 
-    qd->mat.Diffuse.x = 1.0;
-    qd->mat.Diffuse.y = 1.0;
-    qd->mat.Diffuse.z = 1.0;
+	qd->mat.Emissive.x = 0.0;
+	qd->mat.Emissive.y = 0.0;
+	qd->mat.Emissive.z = 0.0;
 
-    qd->mat.Emissive.x = 0.0;
-    qd->mat.Emissive.y = 0.0;
-    qd->mat.Emissive.z = 0.0;
-
-    qd->mat.Ambient.x = 0.0;
-    qd->mat.Ambient.y = 0.0;
-    qd->mat.Ambient.z = 0.0;
+	qd->mat.Ambient.x = 0.0;
+	qd->mat.Ambient.y = 0.0;
+	qd->mat.Ambient.z = 0.0;
 	
 	qd->mat.Specular.x = 0.0;
 	qd->mat.Specular.y = 0.0;
 	qd->mat.Specular.z = 0.0;
 
-    qd->surfacenormal.x = 0;
-    qd->surfacenormal.y = 0;
-    qd->surfacenormal.z = 1.0;
-    qd->surfacenormal.w = 1.0;
+	qd->surfacenormal.x = 0;
+	qd->surfacenormal.y = 0;
+	qd->surfacenormal.z = 1.0;
+	qd->surfacenormal.w = 1.0;
 	
 	qd->mat.bumpmapped  = 1.0;
 	qd->mat.bumpmap.txt = GlobalNormal.txt;
@@ -517,31 +512,31 @@ void Init_Quad(Quad* qd,float x,float y,float w,float h){
 	qd->mat.bumpmap.h = GlobalNormal.h;
 	qd->mat.bumpmap.fmt = GlobalNormal.fmt;
 
-    qd->mat.shine = 1.0;
+	qd->mat.shine = 1.0;
 
 }
 
 void Init_Layer(){
-    int i;
-    float x = 0;
-    float y = 0;
+	int i;
+	float x = 0;
+	float y = 0;
     for(i = 0; i < LAYER_SIZE;i++){
-        Init_Quad(&Layer[i],x,y,128,128);
-        x += 128.0;
+		Init_Quad(&Layer[i],x,y,128,128);
+		x += 128.0;
         if(x > 640){
-            x = 0.0;
-            y+= 128.0;
+			x = 0.0;
+			y+= 128.0;
         }
     }
 }
 void Draw_Layer(){
-   int i;
-    int z;
+	int i;
+	int z;
     for(i = 0; i < LAYER_SIZE;i++){
         for(z = 0; z < LIGHTS;z++){
-            LightQuad(&Layer[i],&Lights[z]);
+			LightQuad(&Layer[i],&Lights[z]);
         }
-        Draw_Quad(&Layer[i]);
+		Draw_Quad(&Layer[i]);
     }
 }
 void Draw_Layer_Bump(){
@@ -561,12 +556,12 @@ void Init(){
 	*/
 	vid_set_mode(DM_640x480,PM_RGB565);
 	vid_border_color(0,255,0);
-    pvr_init_params_t params = {
+	pvr_init_params_t params = {
                 { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16 },
                 1024*1024,0
         };
 
-    pvr_init(&params);
+	pvr_init(&params);
 	//Set palette to ARGB8888 format
 	
 	//pvr_set_pal_format(PVR_PAL_ARGB8888);
@@ -587,43 +582,43 @@ KOS_INIT_ROMDISK(romdisk);
 int main(int argc,char **argv){
 	Init();
 //	sndoggvorbis_start("/rd/billy.ogg",-1);
-    Lights[0].p.z = 10.0;
-    Lights[0].p.x = 0;
-    Lights[0].p.y = 0;
-    Lights[0].c.x = 5.0;
-    Lights[0].c.y = 5.0;
-    Lights[0].c.z = 5.0;
-    Lights[0].c.w = 1.0;
-    Lights[0].aa = 1.0;
-    Lights[0].ab = 0.0;
-    Lights[0].ac = 0.0;
+	Lights[0].p.z = 10.0;
+	Lights[0].p.x = 0;
+	Lights[0].p.y = 0;
+	Lights[0].c.x = 5.0;
+	Lights[0].c.y = 5.0;
+	Lights[0].c.z = 5.0;
+	Lights[0].c.w = 1.0;
+	Lights[0].aa = 1.0;
+	Lights[0].ab = 0.0;
+	Lights[0].ac = 0.0;
 	Lights[0].Spotlight = 0;
 
-    Lights[1].p.z = 10.0;
-    Lights[1].p.x = 640/2.0;
-    Lights[1].p.y = 64.0;
-    Lights[1].c.x = 5.0;
-    Lights[1].c.y = 0.0;
-    Lights[1].c.z = 0.0;
-    Lights[1].c.w = 1.0;
-    Lights[1].aa = 1.0;
-    Lights[1].ab = 0.0;
-    Lights[1].ac = 0.0;
+	Lights[1].p.z = 10.0;
+	Lights[1].p.x = 640/2.0;
+	Lights[1].p.y = 64.0;
+	Lights[1].c.x = 5.0;
+	Lights[1].c.y = 0.0;
+	Lights[1].c.z = 0.0;
+	Lights[1].c.w = 1.0;
+	Lights[1].aa = 1.0;
+	Lights[1].ab = 0.0;
+	Lights[1].ac = 0.0;
 
-    Lights[2].p.z = 10.0;
-    Lights[2].p.x = 640.0 * 0.75;
-    Lights[2].p.y = 480/2.0;
-    Lights[2].c.x = 0.0;
-    Lights[2].c.y = 0.0;
-    Lights[2].c.z = 5.0;
-    Lights[2].c.w = 1.0;
-    Lights[2].aa = 1.0;
-    Lights[2].ab = 0.0;
-    Lights[2].ac = 0.0;
+	Lights[2].p.z = 10.0;
+	Lights[2].p.x = 640.0 * 0.75;
+	Lights[2].p.y = 480/2.0;
+	Lights[2].c.x = 0.0;
+	Lights[2].c.y = 0.0;
+	Lights[2].c.z = 5.0;
+	Lights[2].c.w = 1.0;
+	Lights[2].aa = 1.0;
+	Lights[2].ab = 0.0;
+	Lights[2].ac = 0.0;
 
 	Load_Texture("/rd/bumpmap.raw",&GlobalNormal);
 	Load_Texture("/rd/text.raw",&GlobalTex);
-    Init_Layer();
+	Init_Layer();
 	int q = 0;
 	int x = 0;
 	int pushed = 0;
