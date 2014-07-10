@@ -574,24 +574,24 @@ void Init_Layer(){
 	int i;
 	float x = 0;
 	float y = 0;
-    for(i = 0; i < LAYER_SIZE;i++){
+	for(i = 0; i < LAYER_SIZE;i++){
 		Init_Quad(&Layer[i],x,y,128,128);
 		x += 128.0;
-        if(x > 640){
+		if(x > 640){
 			x = 0.0;
 			y+= 128.0;
-        }
-    }
+		}
+	}
 }
 void Draw_Layer(){
 	int i;
 	int z;
-    for(i = 0; i < LAYER_SIZE;i++){
-        for(z = 0; z < LIGHTS;z++){
+	for(i = 0; i < LAYER_SIZE;i++){
+	for(z = 0; z < LIGHTS;z++){
 			LightQuad(&Layer[i],&Lights[z]);
-        }
+		}
 		Draw_Quad(&Layer[i]);
-    }
+	}
 }
 void Draw_Layer_Bump(){
 	int i;
@@ -626,6 +626,7 @@ void Init(){
 	//sndoggvorbis_init();
 	
 }
+
 
 
 
