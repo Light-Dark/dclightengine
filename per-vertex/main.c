@@ -13,7 +13,8 @@
 #include <math.h>
 #include <oggvorbis/sndoggvorbis.h>
 #define LIGHTS 2
-#define LAYER_SIZE (640/128)*(480/128) + 5
+#define LAYER_SIZE 20
+#define PI 3.141592
 #define MAX(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -285,14 +286,10 @@ inline float DualConeSpotlight(pvr_vertex_t *P,Light* l){
 	return smoothstep(l->cosOuterCone,l->cosInnerCone,cosDirection);
 }
 
-
-
-
-void Light_Vert(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *mat){
-
+void Light_Vert_Spot(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *mat){
 	Mult_Vector3(&mat->Ambient,&GlobalAmbient,&FinalAmbient);
-	FinalPos.x = l->p.x - p->x;
 	
+	FinalPos.x = l->p.x - p->x;
 	FinalPos.y = l->p.y - p->y;
 	FinalPos.z = l->p.z - p->z;
 
@@ -300,8 +297,8 @@ void Light_Vert(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *ma
 
 	Dot(n,&L,&dot);
 	diffuselight = MAX(dot,0.0);
-
 	Mult_Vector3(&l->c,&mat->Diffuse,&FinalDiffuse);
+	
 	d = frsqrt(fipr_magnitude_sqr(FinalPos.x,FinalPos.y,FinalPos.z,0.0));
 	atten = 1.0 / (l->aa + l->ab * (d + l->ac / (d / d)));
 
@@ -320,25 +317,75 @@ void Light_Vert(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *ma
 	
 	if (diffuselight <= 0) specularLight = 0;
 	
+
 	Mult_Vector3(&mat->Specular,&l->c,&FinalSpec);
-	if(l->Spotlight == 0) {
-		FinalSpec.x *=  specularLight * atten;
-		FinalSpec.y *=  specularLight * atten;
-		FinalSpec.z *=  specularLight * atten;
+		
+	float spot = DualConeSpotlight(p,l);
+	FinalSpec.x *=  specularLight * spot * atten;
+	FinalSpec.y *=  specularLight * spot * atten;
+	FinalSpec.z *=  specularLight * spot * atten;
 	
-		FinalDiffuse.x *= diffuselight * atten;
-		FinalDiffuse.y *= diffuselight * atten;
-		FinalDiffuse.z *= diffuselight * atten;
-	} else {
-		float spot = DualConeSpotlight(p,l);
-		FinalSpec.x *=  specularLight * spot * atten;
-		FinalSpec.y *=  specularLight * spot * atten;
-		FinalSpec.z *=  specularLight * spot * atten;
+	FinalDiffuse.x *= diffuselight * spot * atten;
+	FinalDiffuse.y *= diffuselight * spot * atten;
+	FinalDiffuse.z *= diffuselight * spot * atten;
+
+	Add_Vector3(&mat->Emissive,&FinalAmbient,&EmissAmb);
+	Add_Vector3(&FinalDiffuse,&EmissAmb,&FinalAmbient);
+	Add_Vector3(&FinalSpec,&FinalAmbient,&FinalClr);
+	//Blend and clamp
+	outclr->x += FinalClr.x;
+	outclr->x = MIN(outclr->x,1.0);
+	outclr->y += FinalClr.y;
+	outclr->y = MIN(outclr->y,1.0);
+	outclr->z += FinalClr.z;
+	outclr->z = MIN(outclr->z,1.0);
+	outclr->w = 1.0;
+}
+
+
+void Light_Vert(pvr_vertex_t *p,Vector3 *n,Light *l,Vector3* outclr,Material *mat){
+
+	Mult_Vector3(&mat->Ambient,&GlobalAmbient,&FinalAmbient);
+	FinalPos.x = l->p.x - p->x;
 	
-		FinalDiffuse.x *= diffuselight * spot * atten;
-		FinalDiffuse.y *= diffuselight * spot * atten;
-		FinalDiffuse.z *= diffuselight * spot * atten;	
-	}
+	FinalPos.y = l->p.y - p->y;
+	FinalPos.z = l->p.z - p->z;
+
+	Normalize(&FinalPos,&L);
+
+	Dot(n,&L,&dot);
+	diffuselight = MAX(dot,0.0);
+	Mult_Vector3(&l->c,&mat->Diffuse,&FinalDiffuse);
+	
+	d = frsqrt(fipr_magnitude_sqr(FinalPos.x,FinalPos.y,FinalPos.z,0.0));
+	atten = 1.0 / (l->aa + l->ab * (d + l->ac / (d / d)));
+
+	FinalPos.x = 640/2 - p->x;
+	FinalPos.y = 480/2 - p->y;
+	FinalPos.z = 256 - p->z;
+	Vector3 V;
+	Normalize(&FinalPos,&V);
+	Add_Vector3(&L,&V,&pos1);
+
+	Vector3 H;
+	Normalize(&pos1,&H);
+	Dot(n,&H,&dot);
+
+	float specularLight = pow(MAX(dot, 0),mat->shine);
+	
+	if (diffuselight <= 0) specularLight = 0;
+	
+
+	Mult_Vector3(&mat->Specular,&l->c,&FinalSpec);
+
+	FinalSpec.x *=  specularLight * atten;
+	FinalSpec.y *=  specularLight * atten;
+	FinalSpec.z *=  specularLight * atten;
+	
+	FinalDiffuse.x *= diffuselight * atten;
+	FinalDiffuse.y *= diffuselight * atten;
+	FinalDiffuse.z *= diffuselight * atten;
+
 
 	Add_Vector3(&mat->Emissive,&FinalAmbient,&EmissAmb);
 	Add_Vector3(&FinalDiffuse,&EmissAmb,&FinalAmbient);
@@ -366,9 +413,15 @@ void LightQuad(Quad  *qd,Light* l){
 	pos2.z = qd->verts[2].p.z - qd->verts[0].p.z;
 	Cross(&pos1,&pos2,&pos3);
 	Normalize(&pos3,&qd->surfacenormal);
-    for(i = 0;i< 4;i++){
-		Light_Vert(&qd->verts[i].p,&qd->surfacenormal,l,&qd->verts[i].FinalColor,&qd->mat);
-    }
+	if(l->Spotlight == 0){
+		for(i = 0;i< 4;i++){
+			Light_Vert(&qd->verts[i].p,&qd->surfacenormal,l,&qd->verts[i].FinalColor,&qd->mat);
+		}
+	} else {
+		for(i = 0;i < 4;i++){
+			Light_Vert_Spot(&qd->verts[i].p,&qd->surfacenormal,l,&qd->verts[i].FinalColor,&qd->mat);
+		}
+	}
 
 }
 
@@ -397,11 +450,12 @@ void Draw_Bump(Quad *qd,Light *l){
 	p_hdr.cmd |= 4;
 
 	Vector3 D;
-	D.x = (qd->verts[i].p.x+16) - l->p.x;
-	D.y = (qd->verts[i].p.y+16) - l->p.y ;
+	D.x = l->p.x - (qd->verts[i].p.x+16);
+	D.y = l->p.y - (qd->verts[i].p.y+16) ;
 	D.z = 0;
 	float T = l->p.z*frsqrt(fipr_magnitude_sqr(D.x,D.y,0.0,0.0));//0.5 * 3.141592/2;
-	float Q = ((D.y/D.x)) * (3.141592*2);
+	Normalize(&D,&pos1);
+	float Q = ((pos1.y/pos1.x)) * (PI*2);
 	float h = 0.5;
 	pvr_prim(&p_hdr,sizeof(pvr_poly_hdr_t));
 	Uint32 oargb = getBumpParameters(T,Q,h);
@@ -411,7 +465,7 @@ void Draw_Bump(Quad *qd,Light *l){
 		pvr_prim(&qd->verts[i].p,sizeof(pvr_vertex_t));
 
 	}
-	
+
 }
 
 
@@ -556,19 +610,20 @@ void Init(){
 	*/
 	vid_set_mode(DM_640x480,PM_RGB565);
 	vid_border_color(0,255,0);
-	pvr_init_params_t params = {
-                { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16 },
-                1024*1024,0
-        };
+	/*pvr_init_params_t params = {
+                { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_0 },
+                1024*512,0
+        };*/
 
-	pvr_init(&params);
+	//pvr_init(&params);
+	pvr_init_defaults();
 	//Set palette to ARGB8888 format
 	
-	//pvr_set_pal_format(PVR_PAL_ARGB8888);
+	pvr_set_pal_format(PVR_PAL_ARGB8888);
 	
 	//Initialize ogg streamer
-	snd_stream_init();
-	sndoggvorbis_init();
+	//snd_stream_init();
+	//sndoggvorbis_init();
 	
 }
 
@@ -581,7 +636,7 @@ KOS_INIT_ROMDISK(romdisk);
 
 int main(int argc,char **argv){
 	Init();
-//	sndoggvorbis_start("/rd/billy.ogg",-1);
+//	sndoggvorbis_start("/cd/billy.ogg",-1);
 	Lights[0].p.z = 10.0;
 	Lights[0].p.x = 0;
 	Lights[0].p.y = 0;
@@ -604,7 +659,13 @@ int main(int argc,char **argv){
 	Lights[1].aa = 1.0;
 	Lights[1].ab = 0.0;
 	Lights[1].ac = 0.0;
-
+	Lights[1].Dir.x = 0.0;
+	Lights[1].Dir.y = 0.0;
+	Lights[1].Dir.z = -1.0;
+	Lights[1].Spotlight = 0;
+	Lights[1].cosInnerCone = 0.9;//fcos(15.0*(PI/180.0));
+	Lights[1].cosOuterCone = 0.3;//fcos(10.0*(PI/180.0));
+/*
 	Lights[2].p.z = 10.0;
 	Lights[2].p.x = 640.0 * 0.75;
 	Lights[2].p.y = 480/2.0;
@@ -614,10 +675,11 @@ int main(int argc,char **argv){
 	Lights[2].c.w = 1.0;
 	Lights[2].aa = 1.0;
 	Lights[2].ab = 0.0;
-	Lights[2].ac = 0.0;
-
+	Lights[2].ac = 0.0;*/
+	vid_border_color(255,0,0);
 	Load_Texture("/rd/bumpmap.raw",&GlobalNormal);
 	Load_Texture("/rd/text.raw",&GlobalTex);
+	vid_border_color(0,0,255);
 	Init_Layer();
 	int q = 0;
 	int x = 0;
@@ -627,16 +689,13 @@ int main(int argc,char **argv){
 		pvr_wait_ready();
 		vid_border_color(0,255,0);
 		pvr_scene_begin();
-			
 		pvr_list_begin(PVR_LIST_OP_POLY);
 			Draw_Layer();
 		pvr_list_finish();
 		pvr_list_begin(PVR_LIST_TR_POLY);
 			Draw_Layer_Bump();
 		pvr_list_finish();
-		pvr_list_begin(PVR_LIST_PT_POLY);
 
-		pvr_list_finish();
 
 		pvr_scene_finish();
 		vid_border_color(0,0,255);
@@ -695,8 +754,8 @@ int main(int argc,char **argv){
 		
 	}
 
-	sndoggvorbis_stop();
+	//sndoggvorbis_stop();
 	pvr_shutdown();
-	sndoggvorbis_shutdown();
+//	sndoggvorbis_shutdown();
 	return 0;
 }
