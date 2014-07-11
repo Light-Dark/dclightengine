@@ -71,38 +71,36 @@ typedef struct {
 }Vector3 __attribute__((aligned(32)));
 
 typedef struct {
-    Vector3 Emissive;
-    Vector3 Ambient;
-    Vector3 Diffuse;
+	Vector3 Emissive;
+	Vector3 Ambient;
+	Vector3 Diffuse;
 	Vector3 Specular;
 	Texture bumpmap;
 	Uint8 bumpmapped;
-    float shine;
+	float shine;
 }Material;
 
 typedef struct{
 	pvr_vertex_t p;
-    Vector3 c;
-    //Vector3 n;
-    Vector3 FinalColor;
+	Vector3 c;
+	Vector3 FinalColor;
 }Vertex;
 
 typedef struct{
-    Vertex verts[4];
-    Material mat;
-    Vector3 surfacenormal;
+	Vertex verts[4];
+	Material mat;
+	Vector3 surfacenormal;
 }Quad;
 
 
 
 typedef struct{
-    Vector3 p;
-    Vector3 c;
+	Vector3 p;
+	Vector3 c;
 	Vector3 Dir;
-    float aa,ab,ac; //Attenuation coefficients
-    float cosInnerCone,cosOuterCone;
-    Uint8 Spotlight;
-	
+	float aa,ab,ac; //Attenuation coefficients
+	float cosInnerCone,cosOuterCone;
+	Uint8 Spotlight;
 }Light;
 
 
@@ -450,8 +448,8 @@ void Draw_Bump(Quad *qd,Light *l){
 	p_hdr.cmd |= 4;
 
 	Vector3 D;
-	D.x = l->p.x - (qd->verts[i].p.x+16);
-	D.y = l->p.y - (qd->verts[i].p.y+16) ;
+	D.x = (qd->verts[i].p.x+16) - l->p.x;
+	D.y = (qd->verts[i].p.y+16) - l->p.y ;
 	D.z = 0;
 	float T = l->p.z*frsqrt(fipr_magnitude_sqr(D.x,D.y,0.0,0.0));//0.5 * 3.141592/2;
 	Normalize(&D,&pos1);
