@@ -177,20 +177,9 @@ void Load_Texture(const char* fn, Texture* t){
 	}
 	
 }
-
-
-
-float smoothstep(float min, float max, float x){
-	if(x < min)
-		return 0.0;
-	if(x >= max)
-		return 1.0;
-	x  = (x-min)/(max-min);
-	
-	return (-2.0*(x*x*x)) + \
-			(3.0*(x*x));
-}
-
+/*
+	calculates the cross product of 2 vectors
+*/
 inline void Cross(Vector3 *v1,Vector3* v2,Vector3 *out){
 	out->x = (v1->y*v2->z) - (v1->z*v2->y);
 	out->y = (v1->z*v2->x) - (v1->x*v2->z);
@@ -222,31 +211,19 @@ void LightQuad(Quad  *qd,Light* l){
 
 }
 
-uint32 getBumpParameters(float T, float Q, float h) {
-	unsigned char Q2 = (unsigned char) ((Q / (2 * 3.1415927))* 255);
-	unsigned char h2 = (unsigned char) (h * 255);
-
-	unsigned char k1 = 255 - h2;
-	unsigned char k2 = (unsigned char) (h2 * fsin(T));
-	unsigned char k3 = (unsigned char) (h2 * fcos(T));
-	
-	int oargb = k1 << 24 | k2 << 16 | k3 << 8 | Q2;
-
-	return oargb;
-}
-
-
 void Draw_Bump(Quad *qd){
 	int i;
 	pvr_poly_cxt_t p_cxt;
 	pvr_poly_hdr_t p_hdr;
 	
 	pvr_poly_cxt_txr(&p_cxt,PVR_LIST_TR_POLY,qd->mat.bumpmap.fmt,qd->mat.bumpmap.w,qd->mat.bumpmap.w,qd->mat.bumpmap.txt,PVR_FILTER_BILINEAR);
-	//p_cxt.gen.alpha = PVR_ALPHA_ENABLE;
 	p_cxt.gen.specular = PVR_SPECULAR_ENABLE;
-	//p_cxt.txr.env = PVR_TXRENV_DECAL;
 	pvr_poly_compile(&p_hdr,&p_cxt);
 	p_hdr.cmd |= 4;
+	
+	/*
+		Average out the light source positions
+	*/
 	Vector3 G;
 	G.x =0;
 	G.y = 0;
@@ -256,22 +233,27 @@ void Draw_Bump(Quad *qd){
 		G.y += Lights[i].y;
 		G.z += Lights[i].z;
 	}
-	
 	G.x /= LIGHTS;
 	G.y /= LIGHTS;
 	G.z /= LIGHTS;
 	
+	
+	/*
+		Calculate Spherical elevation and rotation angles
+	*/
 	Vector3 D;
 	D.x = (qd->verts[0].p.x+16) - G.x;
 	D.y = (qd->verts[0].p.y+16) - G.y;
 	D.z = (qd->verts[0].p.z) - G.z;
 	float mag = frsqrt(fipr_magnitude_sqr(D.x,D.y,D.z,0.0));
-	float T = mag*(PI*2);//f(frsqrt(fipr_magnitude_sqr(D.x,D.y,0.0,0.0) + (l->z*l->z)));//0.5 * 3.141592/2;
-	
+	float T = mag*(PI*2);
 	float Q = (fast_atan2f(D.y,D.x));
 
 	pvr_prim(&p_hdr,sizeof(pvr_poly_hdr_t));
-	Uint32 oargb = pvr_pack_bump(1.0,T,Q);//getBumpParameters(T,Q,0.1);
+	/*
+		Pack bump paramters, 1.0 is the "bumpiness"
+	*/
+	Uint32 oargb = pvr_pack_bump(1.0,T,Q);
 	for(i=0;i<4;i++){
 		qd->verts[i].trans.oargb = oargb;
 		qd->verts[i].trans.argb = PVR_PACK_COLOR(1.0,0.0,0.0,0.0);
@@ -297,7 +279,7 @@ void Draw_Quad(Quad* qd){
 	
 		qd->verts[i].trans.argb = PVR_PACK_COLOR(0.0,qd->verts[i].FinalColor.x,qd->verts[i].FinalColor.y,qd->verts[i].FinalColor.z);;
 		qd->verts[i].trans.oargb = 0;
-		//printf("Vert %i: %f,%f,%f\n",i,qd->verts[i].p.x,qd->verts[i].p.y,qd->verts[i].p.z);
+		
 		qd->verts[i].trans.x = qd->verts[i].p.x;
 		qd->verts[i].trans.y = qd->verts[i].p.y;
 		qd->verts[i].trans.z = qd->verts[i].p.z;
@@ -305,8 +287,9 @@ void Draw_Quad(Quad* qd){
 		qd->verts[i].trans.v = qd->verts[i].p.v;
 		qd->verts[i].trans.flags = qd->verts[i].p.flags;
 
+		// Transform vertex
 		mat_trans_nodiv(qd->verts[i].trans.x,qd->verts[i].trans.y,qd->verts[i].trans.z,w);
-		//printf("Transformed %i: %f,%f,%f\n",i,qd->verts[i].trans.x,qd->verts[i].trans.y,qd->verts[i].trans.z);
+		
 		pvr_prim(&qd->verts[i].trans,sizeof(pvr_vertex_t));
 		qd->verts[i].FinalColor.x = 0;
 		qd->verts[i].FinalColor.y = 0;
@@ -425,15 +408,9 @@ void Init(){
 	*/
 	vid_set_mode(DM_640x480,PM_RGB565);
 	vid_border_color(0,255,0);
-	/*pvr_init_params_t params = {
-                { PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_0 },
-                1024*512,0
-        };*/
 
-	//pvr_init(&params);
 	pvr_init_defaults();
 	//Set palette to ARGB8888 format
-	
 	pvr_set_pal_format(PVR_PAL_ARGB8888);
 	
 	mat_identity();
@@ -511,10 +488,8 @@ int main(int argc,char **argv){
 
 	while(q == 0){
 		mat_identity();
-		//mat_perspective(XCENTER,YCENTER,COT_FOVY_2,ZNEAR,ZFAR);
-	//	//Screen view matrix
-		
-//		//Perspective frustrum
+
+		//Perspective frustrum
 		mat_apply(&fr_mat);
 		
 		vid_border_color(255,0,0);

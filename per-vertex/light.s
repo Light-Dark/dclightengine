@@ -6,21 +6,21 @@
 	.globl _normalize
 _normalize:
 	fschg
-	fmov @r4+,dr0
+	fmov @r4+,dr0	! Load in vertex to be normalized
 	fmov @r4+,dr2
 	fschg
-	fldi0 fr3
+	fldi0 fr3		! Set W component to 0
 	
-	fipr fv0,fv0
-	fsrra fr3
-	fmul fr3, fr0
+	fipr fv0,fv0	! get the magnitude of the vector by finding the dot product with itself
+	fsrra fr3		! inverse square root is faster on DC
+	fmul fr3, fr0	! multiply out to components
 	fmul fr3, fr1
 	fmul fr3, fr2
-	fldi1 fr3
+	fldi1 fr3		! Set W component to 1
 	
-	add #32,r5
+	add #32,r5		! Setup out pointer
 	fschg
-	fmov dr2, @-r5	
+	fmov dr2, @-r5	! Save to out vector
 	fmov dr0, @-r5
 	rts
 	fschg
