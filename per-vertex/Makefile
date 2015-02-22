@@ -2,19 +2,21 @@
 ##	SORRY FOR THE MESS I SUCK AT MAKEFILES!
 ##	-Liam "Dragmire" Ewasko
 
-all:  rm-elf Game/main.elf Game/1ST_READ.bin 
+all:  rm-elf Game/main.elf stream
 
 include $(KOS_BASE)/Makefile.rules
 
 
 texconv = $(KOS_BASE)/utils/texconv-master/texconv
-OBJS =  main.o
+OBJS = light.o main.o
 
 KOS_LOCAL_CFLAGS = -I$(KOS_BASE)/addons/zlib \
 					-I$(KOS_BASE)/addons/oggvorbis \
 					-I$(KOS_BASE)/lib \
 					-I / 
-					
+
+KOS_CFLAGS += -O2
+			
 
 clean:
 	-rm -f Game/main.elf $(OBJS)
@@ -22,7 +24,9 @@ clean:
 #	-rm -f romdisk/*.raw
 #	-rm -f romdisk/*.pal
 	
-
+stream:
+	dc-tool -t 192.168.1.4 -r
+	dc-tool -t 192.168.1.4 -c later -x Game/main.elf
 
 dist:
 	-rm -f $(OBJS)
@@ -37,11 +41,11 @@ rm-elf:
 Game/1ST_READ.bin:
 	 sh-elf-objcopy  -O binary Game/main.elf Game/main.bin
 	 scramble Game/main.bin Game/1ST_READ.bin
-	 -rm -f Game/main.elf
+	 #-rm -f Game/main.elf
 	 -rm -f Game/main.bin
 
 Game/main.elf: $(OBJS)  romdisk.o
-	$(KOS_CCPLUS)  $(KOS_CPPFLAGS) -O2 $(KOS_LDFLAGS) -o $@ $(KOS_START) $^  -lkosutils  -loggvorbisplay -lpng -lz -lk++ -lstdc++  -lm   $(KOS_LIBS)
+	$(KOS_CC)  $(KOS_CFLAGS) -O2 $(KOS_LDFLAGS) -o $@ $(KOS_START) $^  -lkosutils  -loggvorbisplay -lpng -lz -lk++ -lstdc++  -lm   $(KOS_LIBS)
 
 vq: Bump tex
 Bump: 
