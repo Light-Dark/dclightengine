@@ -15,7 +15,7 @@ KOS_LOCAL_CFLAGS = -I$(KOS_BASE)/addons/zlib \
 					-I$(KOS_BASE)/lib \
 					-I / 
 
-KOS_CFLAGS += -O2
+KOS_CFLAGS += -O3 
 			
 
 clean:

@@ -5,6 +5,7 @@
 	
 	.globl _normalize
 _normalize:
+	pref @r4
 	fschg
 	fmov @r4+,dr0	! Load in vertex to be normalized
 	fmov @r4+,dr2
@@ -36,16 +37,16 @@ _normalize:
 	.globl __lightvertex
 	
 __lightvertex:
-	pref @r5
+
 	fschg
-				
+	pref @r5			
 	fmov @r5+, dr0	!Move light position into fv0
 	fmov @r5+, dr2
-
+	pref @r4
 	fmov @r4+, dr4	!move vertex position into fv4
 	fmov @r4+, dr6
 	fldi0 fr7
-	
+	pref @r7
 	fmov @r7+, dr12	!move vertex normal into fv12
 	fmov @r7+, dr14
 	fldi0 fr15
@@ -73,9 +74,10 @@ __lightvertex:
 	bf .max
 	fldi0 fr15
 .max:
-
-	fmov @r5+, fr4		!copy atten c and atten b into fr4-5
-	fmov @r5+, fr5
+	fschg
+	fmov @r5+, dr4		!copy atten c and atten b into fr4-5
+	fschg
+	!fmov @r5+, fr5
 	fmov @r5+, fr6
 	add #4,r5
 
@@ -85,10 +87,13 @@ __lightvertex:
 	fmul fr6,fr7		! quadratic*a
 	fadd fr5,fr7		! combine
 	
-	
-	fmov @r5+, fr0
-	fmov @r5+, fr1
-	fmov @r5+, fr2		!Move light color into fv0
+	fschg
+	fmov @r5+, dr0
+	fschg
+	fmov @r5+, fr2
+	!fmov @r5+, fr0
+	!fmov @r5+, fr1
+	!fmov @r5+, fr2		!Move light color into fv0
 	
 	fmul fr15,fr0		! multiply light color by attenuation and final diffuse
 	fmul fr7, fr0
@@ -97,10 +102,15 @@ __lightvertex:
 	fmul fr15,fr2
 	fmul fr7, fr2
 	
-	fmov @r6+, fr4		! load in vertex color @ outcolor
-	fmov @r6+, fr5
-	fmov @r6+, fr6
-	fmov @r6+, fr7
+	!fmov @r6+, fr4		! load in vertex color @ outcolor
+	!fmov @r6+, fr5
+	!fmov @r6+, fr6
+	!fmov @r6+, fr7
+	pref @r6
+	fschg
+	fmov @r6+, dr4
+	fmov @r6+, dr6
+	fschg
 
 	fldi1 fr3			! set fr3 to 1 for clamping
 	fadd fr4,fr0		! Add original color with calculated color and clamp
@@ -118,12 +128,15 @@ __lightvertex:
 	bt .nxt3
 	fldi1 fr2
 .nxt3:
-
-	fmov.s fr3, @-r6		! Save final colour to outcolour
-	fmov.s fr2, @-r6
-	fmov.s fr1, @-r6
+	fschg
+	fmov dr2, @-r6
+	fmov dr0, @-r6
+	!fmov.s fr3, @-r6		! Save final colour to outcolour
+	!fmov.s fr2, @-r6
+	!fmov.s fr1, @-r6
 	rts
-	fmov.s fr0, @-r6
+	fschg
+	!fmov.s fr0, @-r6
 	
 
 	

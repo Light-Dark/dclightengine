@@ -39,7 +39,6 @@ static matrix_t fr_mat = {
     {       0.0f,       0.0f, 2 * ZFAR*ZNEAR / (ZNEAR - ZFAR),  1.0f }
 };
 
-
 Texture GlobalNormal;
 Texture GlobalTex;
 
@@ -188,9 +187,9 @@ inline void Cross(Vector3 *v1,Vector3* v2,Vector3 *out){
 }
 
 
-void LightQuad(Quad  *qd,Light* l){
+inline void LightQuad(Quad  *qd,Light* l){
 	int i;
-	//Calculate surface normal
+
 	pos1.x = qd->verts[1].p.x - qd->verts[0].p.x;
 	pos1.y = qd->verts[1].p.y - qd->verts[0].p.y;
 	pos1.z = qd->verts[1].p.z - qd->verts[0].p.z;
@@ -199,54 +198,75 @@ void LightQuad(Quad  *qd,Light* l){
 	pos2.z = qd->verts[2].p.z - qd->verts[0].p.z;
 	Cross(&pos1,&pos2,&pos3);
 	normalize(&pos3,&qd->surfacenormal);
+	static Vector3 temp;
+	temp.w = 1.0;
+	temp.x = qd->verts[0].trans.x;
+	temp.y = qd->verts[0].trans.y;
+	temp.z = qd->verts[0].trans.z;
+	_lightvertex(&temp,l,&qd->verts[0].FinalColor,&qd->surfacenormal);
+	temp.x = qd->verts[1].trans.x;
+	temp.y = qd->verts[1].trans.y;
+	temp.z = qd->verts[1].trans.z;
+	_lightvertex(&temp,l,&qd->verts[1].FinalColor,&qd->surfacenormal);
+	temp.x = qd->verts[2].trans.x;
+	temp.y = qd->verts[2].trans.y;
+	temp.z = qd->verts[2].trans.z;
+	_lightvertex(&temp,l,&qd->verts[2].FinalColor,&qd->surfacenormal);
+	temp.x = qd->verts[3].trans.x;
+	temp.y = qd->verts[3].trans.y;
+	temp.z = qd->verts[3].trans.z;
+	_lightvertex(&temp,l,&qd->verts[3].FinalColor,&qd->surfacenormal);
 
-	for(i = 0;i< 4;i++){
-		Vector3 temp;
+	/*for(i = 0;i< 4;i++){
+	/*	Vector3 temp;
 		temp.w = 1.0;
 		temp.x = qd->verts[i].p.x;
 		temp.y = qd->verts[i].p.y;
 		temp.z = qd->verts[i].p.z;
-		_lightvertex(&temp,l,&qd->verts[i].FinalColor,&qd->surfacenormal);
-	}
+	//	_lightvertex(&temp,l,&qd->verts[i].FinalColor,&qd->surfacenormal);
+	}*/
 
 }
+	pvr_poly_cxt_t p_cxt;
+	pvr_poly_hdr_t p_hdr;
+
 
 void Draw_Bump(Quad *qd){
 	int i;
-	pvr_poly_cxt_t p_cxt;
-	pvr_poly_hdr_t p_hdr;
-	
 	pvr_poly_cxt_txr(&p_cxt,PVR_LIST_TR_POLY,qd->mat.bumpmap.fmt,qd->mat.bumpmap.w,qd->mat.bumpmap.w,qd->mat.bumpmap.txt,PVR_FILTER_BILINEAR);
 	p_cxt.gen.specular = PVR_SPECULAR_ENABLE;
 	pvr_poly_compile(&p_hdr,&p_cxt);
-	p_hdr.cmd |= 4;
+	//p_hdr.cmd |= 4;
 	
 	/*
 		Average out the light source positions
 	*/
-	Vector3 G;
-	G.x =0;
-	G.y = 0;
-	G.z = 0;
-	for(i = 0; i < LIGHTS;i++){
-		G.x += Lights[i].x;
-		G.y += Lights[i].y;
-		G.z += Lights[i].z;
+	static Vector3 D;
+	static Vector3 G;
+	if(LIGHTS > 1){
+		G.x =0;
+		G.y = 0;
+		G.z = 0;
+		for(i = 0; i < LIGHTS;i++){
+			G.x += Lights[i].x;
+			G.y += Lights[i].y;
+			G.z += Lights[i].z;
+		}
+		G.x /= LIGHTS;
+		G.y /= LIGHTS;
+		G.z /= LIGHTS;
+		D.x = (qd->verts[0].p.x+16) - G.x;
+		D.y = (qd->verts[0].p.y+16) - G.y;
+		D.z = (qd->verts[0].p.z) - G.z;
+	}else{
+		D.x = (qd->verts[0].p.x+16) - Lights[0].x;
+		D.y = (qd->verts[0].p.y+16) - Lights[0].y;
+		D.z = (qd->verts[0].p.z) - Lights[0].z;
 	}
-	G.x /= LIGHTS;
-	G.y /= LIGHTS;
-	G.z /= LIGHTS;
-	
-	
 	/*
 		Calculate Spherical elevation and rotation angles
 	*/
-	Vector3 D;
-	D.x = (qd->verts[0].p.x+16) - G.x;
-	D.y = (qd->verts[0].p.y+16) - G.y;
-	D.z = (qd->verts[0].p.z) - G.z;
-	float mag = frsqrt(fipr_magnitude_sqr(D.x,D.y,D.z,0.0));
-	float T = mag*(PI*2);
+	float T = (frsqrt(fipr_magnitude_sqr(D.x,D.y,D.z,0.0)))*PI2;
 	float Q = (fast_atan2f(D.y,D.x));
 
 	pvr_prim(&p_hdr,sizeof(pvr_poly_hdr_t));
@@ -254,49 +274,106 @@ void Draw_Bump(Quad *qd){
 		Pack bump paramters, 1.0 is the "bumpiness"
 	*/
 	Uint32 oargb = pvr_pack_bump(1.0,T,Q);
-	for(i=0;i<4;i++){
-		qd->verts[i].trans.oargb = oargb;
-		qd->verts[i].trans.argb = PVR_PACK_COLOR(1.0,0.0,0.0,0.0);
-		pvr_prim(&qd->verts[i].trans,sizeof(pvr_vertex_t));
-
-	}
+	qd->verts[0].trans.oargb = oargb;
+	qd->verts[0].trans.argb = 0xff000000;
+	pvr_prim(&qd->verts[0].trans,sizeof(pvr_vertex_t));
+	
+	qd->verts[1].trans.oargb = oargb;
+	qd->verts[1].trans.argb = 0xff000000;
+	pvr_prim(&qd->verts[1].trans,sizeof(pvr_vertex_t));
+	
+	qd->verts[2].trans.oargb = oargb;
+	qd->verts[2].trans.argb = 0xff000000;
+	pvr_prim(&qd->verts[2].trans,sizeof(pvr_vertex_t));
+	
+	qd->verts[3].trans.oargb = oargb;
+	qd->verts[3].trans.argb = 0xff000000;
+	pvr_prim(&qd->verts[3].trans,sizeof(pvr_vertex_t));
 
 }
 
+inline void Transform_Quad(Quad* qd){
 
-void Draw_Quad(Quad* qd){
+	mat_trans_single3_nodiv_nomod(qd->verts[0].p.x,qd->verts[0].p.y,qd->verts[0].p.z, \
+								qd->verts[0].trans.x,qd->verts[0].trans.y,qd->verts[0].trans.z);	
+	qd->verts[0].trans.u = qd->verts[0].p.u;
+	qd->verts[0].trans.v = qd->verts[0].p.v;
+	qd->verts[0].trans.flags = qd->verts[0].p.flags;
+	
+	mat_trans_single3_nodiv_nomod(qd->verts[1].p.x,qd->verts[1].p.y,qd->verts[1].p.z, \
+								qd->verts[1].trans.x,qd->verts[1].trans.y,qd->verts[1].trans.z);	
+	qd->verts[1].trans.u = qd->verts[1].p.u;
+	qd->verts[1].trans.v = qd->verts[1].p.v;
+	qd->verts[1].trans.flags = qd->verts[1].p.flags;
+	
+	mat_trans_single3_nodiv_nomod(qd->verts[2].p.x,qd->verts[2].p.y,qd->verts[2].p.z, \
+								qd->verts[2].trans.x,qd->verts[2].trans.y,qd->verts[2].trans.z);	
+	qd->verts[2].trans.u = qd->verts[2].p.u;
+	qd->verts[2].trans.v = qd->verts[2].p.v;
+	qd->verts[2].trans.flags = qd->verts[2].p.flags;
+	
+	mat_trans_single3_nodiv_nomod(qd->verts[3].p.x,qd->verts[3].p.y,qd->verts[3].p.z, \
+								qd->verts[3].trans.x,qd->verts[3].trans.y,qd->verts[3].trans.z);	
+	qd->verts[3].trans.u = qd->verts[3].p.u;
+	qd->verts[3].trans.v = qd->verts[3].p.v;
+	qd->verts[3].trans.flags = qd->verts[3].p.flags;
+}
+
+float w = 1.0;
+inline void Draw_Quad(Quad* qd){
+
+	qd->verts[0].trans.argb = PVR_PACK_COLOR(0.0,qd->verts[0].FinalColor.x,qd->verts[0].FinalColor.y,qd->verts[0].FinalColor.z);
+	pvr_prim(&qd->verts[0].trans,sizeof(pvr_vertex_t));
+	qd->verts[0].FinalColor.x = 0;
+	qd->verts[0].FinalColor.y = 0;
+	qd->verts[0].FinalColor.z = 0; 
+		
+	qd->verts[1].trans.argb = PVR_PACK_COLOR(0.0,qd->verts[1].FinalColor.x,qd->verts[1].FinalColor.y, \
+												qd->verts[1].FinalColor.z);;
+	pvr_prim(&qd->verts[1].trans,sizeof(pvr_vertex_t));
+	qd->verts[1].FinalColor.x = 0;
+	qd->verts[1].FinalColor.y = 0;
+	qd->verts[1].FinalColor.z = 0; 
+		
+	qd->verts[2].trans.argb = PVR_PACK_COLOR(0.0,qd->verts[2].FinalColor.x,qd->verts[2].FinalColor.y, \
+												qd->verts[2].FinalColor.z);;
+	pvr_prim(&qd->verts[2].trans,sizeof(pvr_vertex_t));
+	qd->verts[2].FinalColor.x = 0;
+	qd->verts[2].FinalColor.y = 0;
+	qd->verts[2].FinalColor.z = 0; 
+		
+	qd->verts[3].trans.argb = PVR_PACK_COLOR(0.0,qd->verts[3].FinalColor.x,qd->verts[3].FinalColor.y, \
+												qd->verts[3].FinalColor.z);;
+	pvr_prim(&qd->verts[3].trans,sizeof(pvr_vertex_t));
+	qd->verts[3].FinalColor.x = 0;
+	qd->verts[3].FinalColor.y = 0;
+	qd->verts[3].FinalColor.z = 0; 
+}
+
+void Draw_Layer(){
 	int i;
-	pvr_poly_cxt_t p_cxt;
-	pvr_poly_hdr_t p_hdr;
-
-	pvr_poly_cxt_txr(&p_cxt,PVR_LIST_OP_POLY,GlobalTex.fmt,GlobalTex.w,GlobalTex.h,GlobalTex.txt,PVR_FILTER_BILINEAR);
-	p_cxt.gen.shading = PVR_SHADE_GOURAUD;
-	pvr_poly_compile(&p_hdr,&p_cxt);
-	pvr_prim(&p_hdr,sizeof(p_hdr)); // submit header
-	float w = 1.0;
+	int z;
+	i = LAYER_SIZE;
+	while(i--){
+		Transform_Quad(&Layer[i]);
+	}
 	
-	for( i =0; i < 4;i++){
-	
-		qd->verts[i].trans.argb = PVR_PACK_COLOR(0.0,qd->verts[i].FinalColor.x,qd->verts[i].FinalColor.y,qd->verts[i].FinalColor.z);;
-		qd->verts[i].trans.oargb = 0;
-		
-		qd->verts[i].trans.x = qd->verts[i].p.x;
-		qd->verts[i].trans.y = qd->verts[i].p.y;
-		qd->verts[i].trans.z = qd->verts[i].p.z;
-		qd->verts[i].trans.u = qd->verts[i].p.u;
-		qd->verts[i].trans.v = qd->verts[i].p.v;
-		qd->verts[i].trans.flags = qd->verts[i].p.flags;
-
-		// Transform vertex
-		mat_trans_nodiv(qd->verts[i].trans.x,qd->verts[i].trans.y,qd->verts[i].trans.z,w);
-		
-		pvr_prim(&qd->verts[i].trans,sizeof(pvr_vertex_t));
-		qd->verts[i].FinalColor.x = 0;
-		qd->verts[i].FinalColor.y = 0;
-		qd->verts[i].FinalColor.z = 0; 
+	i = LAYER_SIZE;
+	while(i--){
+		z = LIGHTS;
+		while(z--){
+			LightQuad(&Layer[i],&Lights[z]);
+		}
+	}
+	i = LAYER_SIZE;
+	while(i--){
+		pvr_poly_cxt_txr(&p_cxt,PVR_LIST_OP_POLY,GlobalTex.fmt,GlobalTex.w,GlobalTex.h,GlobalTex.txt,PVR_FILTER_BILINEAR);
+		p_cxt.gen.shading = PVR_SHADE_GOURAUD;
+		pvr_poly_compile(&p_hdr,&p_cxt);
+		pvr_prim(&p_hdr,sizeof(p_hdr));
+		Draw_Quad(&Layer[i]);
 	}
 }
-
 
 void Init_Quad(Quad* qd,float x,float y,float z,float w,float h){
 	qd->verts[0].p.x = x;
@@ -306,6 +383,8 @@ void Init_Quad(Quad* qd,float x,float y,float z,float w,float h){
 	qd->verts[0].p.u = 0.0;
 	qd->verts[0].p.v = 0.0;
 	qd->verts[0].p.oargb = 0;
+	
+	memset(&qd->verts[0].trans,0,sizeof(qd->verts[0].trans));
 
 	qd->verts[0].c.x = 0.0;
 	qd->verts[0].c.y = 0.0;
@@ -319,6 +398,8 @@ void Init_Quad(Quad* qd,float x,float y,float z,float w,float h){
 	qd->verts[1].p.u = 1.0;
 	qd->verts[1].p.v = 0.0;
 	qd->verts[1].p.oargb = 0;
+	
+	memset(&qd->verts[1].trans,0,sizeof(qd->verts[1].trans));
 
 	qd->verts[1].c.x = 0.0;
 	qd->verts[1].c.y = 0.0;
@@ -331,6 +412,8 @@ void Init_Quad(Quad* qd,float x,float y,float z,float w,float h){
 	qd->verts[2].p.u = 0.0;
 	qd->verts[2].p.v = 1.0;
 	qd->verts[2].p.oargb = 0;
+	
+	memset(&qd->verts[2].trans,0,sizeof(qd->verts[2].trans));
 
 	qd->verts[2].c.x = 0.0;
 	qd->verts[2].c.y = 0.0;
@@ -343,10 +426,16 @@ void Init_Quad(Quad* qd,float x,float y,float z,float w,float h){
 	qd->verts[3].p.u = 1.0;
 	qd->verts[3].p.v = 1.0;
 	qd->verts[3].p.oargb = 0;
+	
+	memset(&qd->verts[3].trans,0,sizeof(qd->verts[3].trans));
 
 	qd->verts[3].c.x = 0.0;
 	qd->verts[3].c.y = 0.0;
 	qd->verts[3].c.z = 0.0;
+	
+	
+	//Calculate surface normal
+
 
 	qd->mat.Diffuse.x = 0.0;
 	qd->mat.Diffuse.y = 0.0;
@@ -358,6 +447,7 @@ void Init_Quad(Quad* qd,float x,float y,float z,float w,float h){
 	qd->surfacenormal.w = 1.0;
 	
 	qd->mat.bumpmapped  = 1.0;
+
 	qd->mat.bumpmap.txt = GlobalNormal.txt;
 	qd->mat.bumpmap.w = GlobalNormal.w;
 	qd->mat.bumpmap.h = GlobalNormal.h;
@@ -373,27 +463,18 @@ void Init_Layer(){
 	float y = 0;
 	float z = 1.0;
 	for(i = 0; i < LAYER_SIZE;i++){
-		Init_Quad(&Layer[i],x,y,z,64,64);
-		x += 64.0;
+		Init_Quad(&Layer[i],x,y,z,TILE,TILE);
+		x += TILE;
 		if(x == 640){
 			x = 0.0;
-			y += 64.0;
+			y += TILE;
 		}
 	}
 }
-void Draw_Layer(){
-	int i;
-	int z;
-	for(i = 0; i < LAYER_SIZE;i++){
-		for(z = 0; z < LIGHTS;z++){
-			LightQuad(&Layer[i],&Lights[z]);
-		}
-		Draw_Quad(&Layer[i]);
-	}
-}
+
 void Draw_Layer_Bump(){
-	int i;
-	for(i = 0; i < LAYER_SIZE;i++){
+	int i = LAYER_SIZE;
+	while(i--){
 		if(Layer[i].mat.bumpmapped == 1){
 			Draw_Bump(&Layer[i]);
 		}
@@ -409,7 +490,22 @@ void Init(){
 	vid_set_mode(DM_640x480,PM_RGB565);
 	vid_border_color(0,255,0);
 
-	pvr_init_defaults();
+	//pvr_init_defaults();
+	
+	pvr_init_params_t pvr_params;
+	pvr_params.vertex_buf_size= 1024*512;
+	pvr_params.dma_enabled= 0;
+	pvr_params.fsaa_enabled= 0;
+	pvr_params.autosort_disabled = 0;
+	pvr_params.opb_sizes[PVR_LIST_OP_POLY]= PVR_BINSIZE_32;
+	pvr_params.opb_sizes[PVR_LIST_OP_MOD]= PVR_BINSIZE_0;
+	pvr_params.opb_sizes[PVR_LIST_TR_POLY]= PVR_BINSIZE_16;
+	pvr_params.opb_sizes[PVR_LIST_TR_MOD]= PVR_BINSIZE_0;
+	pvr_params.opb_sizes[PVR_LIST_PT_POLY]= PVR_BINSIZE_16;
+	
+	pvr_init(&pvr_params);
+
+	
 	//Set palette to ARGB8888 format
 	pvr_set_pal_format(PVR_PAL_ARGB8888);
 	
@@ -422,8 +518,15 @@ void Init(){
 	
 }
 
+float avgfps = -1;
+char buf[64];
+void running_stats(){
+	pvr_stats_t stats;
+	pvr_get_stats(&stats);
 
-
+	avgfps = stats.frame_rate;
+			
+}
 
 extern uint8 romdisk[];
 
@@ -485,7 +588,8 @@ int main(int argc,char **argv){
 	int x = 0;
 	int pushed = 0;
 	int bumpenabled = 1;
-
+	int display_fps = 0;
+	//bfont_set_encoding(BFONT_CODE_ISO8859_1);
 	while(q == 0){
 		mat_identity();
 
@@ -499,13 +603,16 @@ int main(int argc,char **argv){
 		pvr_list_begin(PVR_LIST_OP_POLY);
 			Draw_Layer();
 		pvr_list_finish();
-		if(bumpenabled){
-			pvr_list_begin(PVR_LIST_TR_POLY);
-				Draw_Layer_Bump();
-			pvr_list_finish();
-		}
+		
+		pvr_list_begin(PVR_LIST_TR_POLY);
+		if(bumpenabled)
+			Draw_Layer_Bump();
+		pvr_list_finish();
+		
+		pvr_list_begin(PVR_LIST_PT_POLY);
 
-
+		pvr_list_finish();
+		
 		pvr_scene_finish();
 		vid_border_color(0,0,255);
 	
@@ -548,6 +655,15 @@ int main(int argc,char **argv){
 				}
 			} 
 			
+			if(st->buttons & CONT_B && pushed == 0){
+				display_fps ^= 0x01;
+				pushed = 1;
+			}
+			
+			if(st->buttons & CONT_X && pushed == 0){
+				bumpenabled ^= 0x01;
+				pushed = 1;
+			}
 			
 			if(!(st->buttons & CONT_A) && !(st->buttons & CONT_B) && !(st->buttons & CONT_X) && !(st->buttons & CONT_Y)){
 				pushed = 0;
@@ -556,6 +672,12 @@ int main(int argc,char **argv){
 			
 		
 		MAPLE_FOREACH_END();
+		running_stats();
+		sprintf(buf,"FPS:%f",avgfps);
+		if(display_fps){
+				//printf("%s\n",buf);
+			bfont_draw_str(vram_s + (640*24),640,1,buf);
+		}
 		
 	}
 	DeleteTexture(&GlobalNormal);
