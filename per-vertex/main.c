@@ -501,7 +501,7 @@ void Init(){
 	pvr_params.opb_sizes[PVR_LIST_OP_MOD]= PVR_BINSIZE_0;
 	pvr_params.opb_sizes[PVR_LIST_TR_POLY]= PVR_BINSIZE_16;
 	pvr_params.opb_sizes[PVR_LIST_TR_MOD]= PVR_BINSIZE_0;
-	pvr_params.opb_sizes[PVR_LIST_PT_POLY]= PVR_BINSIZE_16;
+	pvr_params.opb_sizes[PVR_LIST_PT_POLY]= PVR_BINSIZE_0;
 	
 	pvr_init(&pvr_params);
 
@@ -589,7 +589,7 @@ int main(int argc,char **argv){
 	int pushed = 0;
 	int bumpenabled = 1;
 	int display_fps = 0;
-	//bfont_set_encoding(BFONT_CODE_ISO8859_1);
+	bfont_set_encoding(BFONT_CODE_ISO8859_1);
 	while(q == 0){
 		mat_identity();
 
@@ -607,10 +607,6 @@ int main(int argc,char **argv){
 		pvr_list_begin(PVR_LIST_TR_POLY);
 		if(bumpenabled)
 			Draw_Layer_Bump();
-		pvr_list_finish();
-		
-		pvr_list_begin(PVR_LIST_PT_POLY);
-
 		pvr_list_finish();
 		
 		pvr_scene_finish();

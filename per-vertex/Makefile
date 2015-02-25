@@ -23,7 +23,7 @@ clean:
 	-rm -f romdisk.*
 #	-rm -f romdisk/*.raw
 #	-rm -f romdisk/*.pal
-	
+nostream: rm-elf Game/main.elf Game/1ST_READ.bin 
 stream:
 	dc-tool -t 192.168.1.4 -r
 	dc-tool -t 192.168.1.4 -c later -x Game/main.elf
@@ -43,6 +43,7 @@ Game/1ST_READ.bin:
 	 scramble Game/main.bin Game/1ST_READ.bin
 	 #-rm -f Game/main.elf
 	 -rm -f Game/main.bin
+	 run iso.bat
 
 Game/main.elf: $(OBJS)  romdisk.o
 	$(KOS_CC)  $(KOS_CFLAGS) -O2 $(KOS_LDFLAGS) -o $@ $(KOS_START) $^  -lkosutils  -loggvorbisplay -lpng -lz -lk++ -lstdc++  -lm   $(KOS_LIBS)

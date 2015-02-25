@@ -5,7 +5,7 @@
 #define LIGHTS 3
 #define MAX_LIGHTS 3
 #define TILE 64
-#define LAYER_SIZE ((640/TILE)*((480/TILE)))
+#define LAYER_SIZE (((640/TILE)*((480/TILE))) + (480/TILE))
 #define PI 3.14159265f
 #define PI2 6.28318530f
 #define PI_FLOAT     3.14159265f

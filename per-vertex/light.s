@@ -39,14 +39,14 @@ _normalize:
 __lightvertex:
 
 	fschg
-	pref @r5			
+		
 	fmov @r5+, dr0	!Move light position into fv0
 	fmov @r5+, dr2
-	pref @r4
+
 	fmov @r4+, dr4	!move vertex position into fv4
 	fmov @r4+, dr6
 	fldi0 fr7
-	pref @r7
+
 	fmov @r7+, dr12	!move vertex normal into fv12
 	fmov @r7+, dr14
 	fldi0 fr15
@@ -106,7 +106,7 @@ __lightvertex:
 	!fmov @r6+, fr5
 	!fmov @r6+, fr6
 	!fmov @r6+, fr7
-	pref @r6
+
 	fschg
 	fmov @r6+, dr4
 	fmov @r6+, dr6
