@@ -29,7 +29,7 @@ static Uint32 Pindex8 = 0;
 Vector3 pos3 = {0.0,0.0,1.0,1.0};
 Vector3 pos1 = {0,0,0,1.0};
 Vector3 pos2 = {0,0,0,1.0};
-
+int LIGHTS = 3;
 
 /* Frustum matrix (does perspective) */
 static matrix_t fr_mat = {
@@ -257,15 +257,15 @@ void Draw_Bump(Quad *qd){
 		Calculate Spherical elevation and rotation angles
 	*/
 	float T = (frsqrt(fipr_magnitude_sqr(D.x,D.y,D.z,0.0)))*PI2;
-	float Q = (fast_atan2f(D.y,D.x));
 
+	float Q = (fast_atan2f(D.y,D.x));
 	pvr_prim(&p_hdr,sizeof(pvr_poly_hdr_t));
 	/*
 		Pack bump paramters, 1.0 is the "bumpiness"
 	*/
 	Uint32 oargb = pvr_pack_bump(1.0,T,Q);
-	qd->verts[0].trans.oargb = oargb;
 	qd->verts[0].trans.argb = 0xff000000;
+	qd->verts[0].trans.oargb = oargb;
 	pvr_prim(&qd->verts[0].trans,sizeof(pvr_vertex_t));
 	
 	qd->verts[1].trans.oargb = oargb;
@@ -583,8 +583,6 @@ int main(int argc,char **argv){
 	while(q == 0){
 		mat_identity();
 
-		//Perspective frustrum
-		mat_apply(&fr_mat);
 		
 		vid_border_color(255,0,0);
 		pvr_wait_ready();
@@ -641,6 +639,14 @@ int main(int argc,char **argv){
 				}
 			} 
 			
+			if(st->buttons & CONT_Y && pushed == 0){
+				LIGHTS--;
+				pushed = 1;
+				if(LIGHTS < 0){
+					LIGHTS = MAX_LIGHTS;
+				}
+			}
+			
 			if(st->buttons & CONT_B && pushed == 0){
 				display_fps ^= 0x01;
 				pushed = 1;
@@ -654,7 +660,6 @@ int main(int argc,char **argv){
 			if(!(st->buttons & CONT_A) && !(st->buttons & CONT_B) && !(st->buttons & CONT_X) && !(st->buttons & CONT_Y)){
 				pushed = 0;
 			}
-			
 			
 		
 		MAPLE_FOREACH_END();

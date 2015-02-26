@@ -87,9 +87,8 @@ __lightvertex:
 	fmul fr6,fr7		! quadratic*a
 	fadd fr5,fr7		! combine
 	
-	fschg
-	fmov @r5+, dr0
-	fschg
+	fmov @r5+, fr0
+	fmov @r5+, fr1
 	fmov @r5+, fr2
 	!fmov @r5+, fr0
 	!fmov @r5+, fr1

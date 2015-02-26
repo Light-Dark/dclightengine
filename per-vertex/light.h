@@ -2,7 +2,6 @@
 #define LIGHT_H
 
 
-#define LIGHTS 3
 #define MAX_LIGHTS 3
 #define TILE 64
 #define LAYER_SIZE (((640/TILE)*((480/TILE))) + (480/TILE))
