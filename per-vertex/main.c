@@ -45,6 +45,9 @@ Texture GlobalTex;
 Quad Layer[LAYER_SIZE];
 Light Lights[MAX_LIGHTS];
 
+pvr_poly_cxt_t p_cxt;
+pvr_poly_hdr_t p_hdr;
+
 float fast_atan2f( float y, float x )
 {
 	if ( x == 0.0f )
@@ -216,20 +219,7 @@ inline void LightQuad(Quad  *qd,Light* l){
 	temp.y = qd->verts[3].trans.y;
 	temp.z = qd->verts[3].trans.z;
 	_lightvertex(&temp,l,&qd->verts[3].FinalColor,&qd->surfacenormal);
-
-	/*for(i = 0;i< 4;i++){
-	/*	Vector3 temp;
-		temp.w = 1.0;
-		temp.x = qd->verts[i].p.x;
-		temp.y = qd->verts[i].p.y;
-		temp.z = qd->verts[i].p.z;
-	//	_lightvertex(&temp,l,&qd->verts[i].FinalColor,&qd->surfacenormal);
-	}*/
-
 }
-	pvr_poly_cxt_t p_cxt;
-	pvr_poly_hdr_t p_hdr;
-
 
 void Draw_Bump(Quad *qd){
 	int i;

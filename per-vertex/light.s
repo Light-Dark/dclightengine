@@ -110,7 +110,7 @@ __lightvertex:
 	fschg
 	fmov @r6+, dr4
 	fmov @r6+, dr6
-	fschg
+	
 
 	fldi1 fr3			! set fr3 to 1 for clamping
 	fadd fr4,fr0		! Add original color with calculated color and clamp
@@ -128,7 +128,7 @@ __lightvertex:
 	bt .nxt3
 	fldi1 fr2
 .nxt3:
-	fschg
+
 	fmov dr2, @-r6
 	fmov dr0, @-r6
 	!fmov.s fr3, @-r6		! Save final colour to outcolour
